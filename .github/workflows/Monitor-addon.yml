@@ -1,0 +1,205 @@
+name: Monitor Addon Releases
+
+on:
+  # 定时触发（每小时执行一次）
+  schedule:
+    - cron: '0 17 * * *'
+  # 手动触发（方便测试）
+  workflow_dispatch:
+    inputs:
+      repositories:
+        description: 'Repositories to monitor (comma-separated, e.g. owner/repo1,owner/repo2)'
+        required: false
+        default: 'esphome/home-assistant-addon'
+
+jobs:
+  # 定义要监控的仓库矩阵
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix from inputs or default
+        id: set-matrix
+        run: |
+          # 从输入参数或默认值获取仓库列表
+          repositories="${{ github.event.inputs.repositories || 'esphome/home-assistant-addon' }}"
+          
+          # 将逗号分隔的字符串转换为 JSON 数组
+          IFS=',' read -ra repo_array <<< "$repositories"
+          printf -v json_array '{"name":"%s"},' "${repo_array[@]}"
+          json_array="[${json_array%,}]"
+          
+          echo "matrix=$json_array" >> $GITHUB_OUTPUT
+          echo "Repositories to monitor: $json_array"
+
+  # 并行监控每个仓库
+  monitor:
+    needs: setup-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.setup-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get current release
+        id: current_release
+        run: |
+          # 获取当前仓库的最新 Release 信息
+          owner=$(echo "${{ matrix.name }}" | cut -d'/' -f1)
+          repo=$(echo "${{ matrix.name }}" | cut -d'/' -f2)
+          
+          response=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${owner}/${repo}/releases/latest")
+          
+          # 提取版本号和 URL
+          current_version=$(echo "$response" | jq -r '.name')
+          release_url=$(echo "$response" | jq -r '.html_url')
+          body=$(echo "$response" | jq -r '.body')
+          
+          # 使用 GitHub 环境文件格式设置变量
+          echo "current_version<<EOF" >> $GITHUB_ENV
+          echo "$current_version" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          echo "release_url<<EOF" >> $GITHUB_ENV
+          echo "$release_url" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          echo "body<<EOF" >> $GITHUB_ENV
+          echo "$body" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          # 打印调试信息
+          echo "Current release: $current_version"
+          echo "Release url: $release_url"
+          echo "Body: $body"
+
+      - name: Compare with previous release
+        id: compare
+        run: |
+          # 读取上次记录的版本（如果存在）
+          previous_version=""
+          if [ -f ".github/${{ matrix.name }}_last_release.txt" ]; then
+            previous_version=$(cat ".github/${{ matrix.name }}_last_release.txt")
+          fi
+          
+          # 比较版本
+          if [ "$previous_version" != "${{ env.current_version }}" ]; then
+            echo "new_release=true" >> $GITHUB_ENV
+            echo "previous_version=$previous_version" >> $GITHUB_ENV
+            
+            # 创建临时文件存储新版本信息
+            mkdir -p .github/temp_releases
+            cat << EOF > ".github/temp_releases/${{ matrix.name }}.json"
+            {
+              "repo": "${{ matrix.name }}",
+              "version": "${{ env.current_version }}",
+              "previous": "$previous_version",
+              "url": "${{ env.release_url }}",
+              "body": "${{ env.body }}"
+            }
+            EOF
+          else
+            echo "new_release=false" >> $GITHUB_ENV
+          fi
+          
+          # 保存当前版本
+          mkdir -p .github
+          echo "${{ env.current_version }}" > ".github/${{ matrix.name }}_last_release.txt"
+
+  # 整合所有新版本并发送通知
+  notify:
+    needs: monitor
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect new releases
+        id: collect
+        run: |
+          # 检查是否有新版本
+          if [ -d ".github/temp_releases" ] && [ "$(ls -A .github/temp_releases)" ]; then
+            echo "new_releases=true" >> $GITHUB_ENV
+            
+            # 构建通知消息
+            message_title="🎉 发现 ${#.github/temp_releases/*} 个新版本更新"
+            message_body=""
+            
+            for file in .github/temp_releases/*.json; do
+              # 从 JSON 文件读取信息
+              repo=$(jq -r '.repo' "$file")
+              version=$(jq -r '.version' "$file")
+              previous=$(jq -r '.previous' "$file")
+              url=$(jq -r '.url' "$file")
+              body=$(jq -r '.body' "$file")
+              
+              # 追加到消息主体
+              message_body+="\n\n### [${repo}](${url})\n\n"
+              message_body+="**版本:** [${version}]\n\n"
+              
+              if [ "$previous" != "null" ]; then
+                message_body+="**上一版本:** [${previous}]\n\n"
+              fi
+              
+              # 截取前 500 字符的描述（避免消息过长）
+              if [ ${#body} -gt 500 ]; then
+                body="${body:0:500}..."
+              fi
+              
+              message_body+="**更新内容:**\n\n${body}\n\n"
+            done
+            
+            # 保存消息到环境变量
+            echo "message_title=$message_title" >> $GITHUB_ENV
+            echo "message_body<<EOF" >> $GITHUB_ENV
+            echo "$message_body" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+            
+            echo "Found new releases to notify"
+          else
+            echo "new_releases=false" >> $GITHUB_ENV
+            echo "No new releases found"
+          fi
+
+      - name: Send DingTalk notification
+        if: env.new_releases == 'true'
+        run: |
+          # 设置时区为东八区并格式化时间
+          timestamp=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S%:z")
+          
+          # 构建钉钉消息
+          message=$(cat <<EOF
+          {
+            "msgtype": "markdown",
+            "markdown": {
+              "title": "$message_title",
+              "text": "🚀 **检测时间: $timestamp**\n\n${{ env.message_body }}"
+            },
+            "at": {
+              "isAtAll": false
+            }
+          }
+          EOF
+          )
+          
+          # 发送通知
+          curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$message"
+          
+          echo "Notification sent for new releases"
+
+      - name: Commit updated release files
+        if: env.new_releases == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .github/*_last_release.txt
+          git commit -m "Update last release versions"
+          git push
