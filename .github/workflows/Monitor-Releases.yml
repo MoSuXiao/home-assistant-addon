@@ -19,19 +19,25 @@ jobs:
         run: |
           # 获取最新 Release 信息
           response=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/esphome/home-assistant-addon/releases/latest")
+            "https://api.github.com/repos/${{ github.repository }}/releases/latest")
           
           # 提取版本号和 URL
           current_version=$(echo "$response" | jq -r '.name')
           release_url=$(echo "$response" | jq -r '.html_url')
-          # 对 body 进行转义处理（替换特殊字符）
-          body=$(echo "$response" | jq -r '.body' | sed 's/%/%25/g' | sed 's/\r/%0D/g' | sed 's/\n/%0A/g')
+          body=$(echo "$response" | jq -r '.body')
           
+          # 使用 GitHub 环境文件格式设置变量（更安全）
+          echo "current_version<<EOF" >> $GITHUB_ENV
+          echo "$current_version" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
           
-          # 输出变量
-          echo "current_version=$current_version" >> $GITHUB_ENV
-          echo "release_url=$release_url" >> $GITHUB_ENV
-          echo "body=$body" >> $GITHUB_ENV
+          echo "release_url<<EOF" >> $GITHUB_ENV
+          echo "$release_url" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          echo "body<<EOF" >> $GITHUB_ENV
+          echo "$body" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
           
           # 打印调试信息
           echo "Current release: $current_version"
