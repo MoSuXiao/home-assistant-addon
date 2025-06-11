@@ -24,7 +24,9 @@ jobs:
           # 提取版本号和 URL
           current_version=$(echo "$response" | jq -r '.name')
           release_url=$(echo "$response" | jq -r '.html_url')
-          body=$(echo "$response" | jq -r '.body')
+          # 对 body 进行转义处理（替换特殊字符）
+          body=$(echo "$response" | jq -r '.body' | sed 's/%/%25/g' | sed 's/\r/%0D/g' | sed 's/\n/%0A/g')
+          
           
           # 输出变量
           echo "current_version=$current_version" >> $GITHUB_ENV
