@@ -1,0 +1,101 @@
+name: Monitor esphome Releases
+
+on:
+  # 定时触发
+  # schedule:
+  #   - cron: '0 17 * * *'
+  # 手动触发（方便测试）
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get current release
+        id: current_release
+        run: |
+          # 获取最新 Release 信息
+          response=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/esphome/home-assistant-addon/releases/latest")
+          
+          # 提取版本号和 URL
+          current_version=$(echo "$response" | jq -r '.name')
+          release_url=$(echo "$response" | jq -r '.html_url')
+          body=$(echo "$response" | jq -r '.body')
+          
+          # 使用 GitHub 环境文件格式设置变量（更安全）
+          echo "current_version<<EOF" >> $GITHUB_ENV
+          echo "$current_version" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          echo "release_url<<EOF" >> $GITHUB_ENV
+          echo "$release_url" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          echo "body<<EOF" >> $GITHUB_ENV
+          echo "$body" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          # 打印调试信息
+          echo "Current release: $current_version"
+          echo "Release url: $release_url"
+          echo "Body: $body"
+
+      - name: Compare with previous release
+        id: compare
+        run: |
+          # 读取上次记录的版本（如果存在）
+          previous_version=""
+          if [ -f ".github/last_release.txt" ]; then
+            previous_version=$(cat .github/last_release.txt)
+          fi
+          
+          # 比较版本
+          if [ "$previous_version" != "$current_version" ]; then
+            echo "new_release=true" >> $GITHUB_ENV
+            echo "previous_version=$previous_version" >> $GITHUB_ENV
+          else
+            echo "new_release=false" >> $GITHUB_ENV
+          fi
+          
+          # 保存当前版本
+          mkdir -p .github
+          echo "$current_version" > .github/last_release.txt
+
+      - name: Send DingTalk notification
+        if: env.new_release == 'true'
+        run: |
+          # 构建钉钉消息
+          timestamp=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S%:z")
+          message=$(cat <<EOF
+          {
+            "msgtype": "markdown",
+            "markdown": {
+              "title": "New Release: ${{ env.current_version }}",
+              "text": "🚀 **New Release Detected at $timestamp**\n\n**Repo:**[esphome/home-assistant-addon](${{ env.release_url }})\n\n**Version:**[${{ env.current_version }}]\n\n**Previous:**[${{ env.previous_version }}]\n\n**Description:**\n\n ${{ env.body }}"
+            },
+            "at": {
+              "isAtAll": false
+            }
+          }
+          EOF
+          )
+          
+          # 发送通知
+          curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$message"
+          
+          echo "Notification sent for new release: ${{ env.current_version }}"
+
+      - name: Commit updated release file
+        if: env.new_release == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .github/last_release.txt
+          git commit -m "Update last release version to ${{ env.current_version }}"
+          git push
