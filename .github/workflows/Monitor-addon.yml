@@ -1,9 +1,8 @@
 name: Monitor Addon Releases
 
 on:
-  # 定时触发（每小时执行一次）
-  schedule:
-    - cron: '0 17 * * *'
+  # schedule:
+    # - cron: '0 17 * * *'
   # 手动触发（方便测试）
   workflow_dispatch:
     inputs:
@@ -23,7 +22,7 @@ jobs:
         id: set-matrix
         run: |
           # 从输入参数或默认值获取仓库列表
-          repositories="${{ github.event.inputs.repositories || 'esphome/home-assistant-addon' }}"
+          repositories="${{ github.event.inputs.repositories || 'esphome/home-assistant-addon,esphome/esphome' }}"
           
           # 将逗号分隔的字符串转换为 JSON 数组
           IFS=',' read -ra repo_array <<< "$repositories"
