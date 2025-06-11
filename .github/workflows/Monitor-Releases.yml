@@ -69,13 +69,13 @@ jobs:
         if: env.new_release == 'true'
         run: |
           # 构建钉钉消息
-          timestamp=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
+          timestamp=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S%:z")
           message=$(cat <<EOF
           {
             "msgtype": "markdown",
             "markdown": {
               "title": "New Release: ${{ env.current_version }}",
-              "text": "🚀 **New Release Detected at $timestamp** \n [esphome/home-assistant-addon](${{ env.release_url }}) \n **Version:** [${{ env.current_version }}] \n **Previous:** [${{ env.previous_version }}] \n **Description:** \n ${{ env.body }}"
+              "text": "🚀 **New Release Detected at $timestamp**\n\n**Repo:**[esphome/home-assistant-addon](${{ env.release_url }})\n\n**Version:**[${{ env.current_version }}]\n\n**Previous:**[${{ env.previous_version }}]\n\n**Description:**\n\n ${{ env.body }}"
             },
             "at": {
               "isAtAll": false
