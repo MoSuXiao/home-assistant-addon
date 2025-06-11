@@ -112,18 +112,18 @@ jobs:
             echo "new_release=true" >> $GITHUB_ENV
             echo "previous_version=$previous_version" >> $GITHUB_ENV
           
-            # 创建临时文件存储新版本信息
+            # 创建临时文件存储新版本信息（使用 jq 安全转义 JSON）
             mkdir -p .github/temp_releases
-            cat << EOF > ".github/temp_releases/${{ matrix.owner }}_${{ matrix.repo }}.json"
-            {
-              "owner": "${{ matrix.owner }}",
-              "repo": "${{ matrix.repo }}",
-              "version": "${{ env.current_version }}",
-              "previous": "$previous_version",
-              "url": "${{ env.release_url }}",
-              "body": "${{ env.body }}"
-            }
-            EOF
+          
+            # 使用 jq 构建和写入 JSON，确保特殊字符被正确转义
+            jq -n --arg owner "${{ matrix.owner }}" \
+                  --arg repo "${{ matrix.repo }}" \
+                  --arg version "${{ env.current_version }}" \
+                  --arg previous "$previous_version" \
+                  --arg url "${{ env.release_url }}" \
+                  --arg body "${{ env.body }}" \
+                  '{owner: $owner, repo: $repo, version: $version, previous: $previous, url: $url, body: $body}' \
+                  > ".github/temp_releases/${{ matrix.owner }}_${{ matrix.repo }}.json"
           else
             echo "new_release=false" >> $GITHUB_ENV
           fi
