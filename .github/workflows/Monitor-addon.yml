@@ -1,4 +1,4 @@
-name: Monitor Addon Releases
+name: Monitor ESPHome Releases
 
 on:
   # schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       repositories:
-        description: 'Repositories to monitor (comma-separated, e.g. owner/repo1,owner/repo2)'
+        description: 'Repositories to monitor (comma-separated, e.g. owner1/repo1,owner2/repo2)'
         required: false
         default: 'esphome/home-assistant-addon'
 
@@ -22,12 +22,35 @@ jobs:
         id: set-matrix
         run: |
           # 从输入参数或默认值获取仓库列表
-          repositories="${{ github.event.inputs.repositories || 'esphome/home-assistant-addon,esphome/esphome' }}"
+          repositories="${{ github.event.inputs.repositories || 'esphome/home-assistant-addon' }}"
           
-          # 将逗号分隔的字符串转换为 JSON 数组
+          # 初始化 JSON 数组
+          json_array="["
+          first=true
+          
+          # 处理每个仓库
           IFS=',' read -ra repo_array <<< "$repositories"
-          printf -v json_array '{"name":"%s"},' "${repo_array[@]}"
-          json_array="[${json_array%,}]"
+          for repo in "${repo_array[@]}"; do
+            # 分割 owner 和 repo
+            owner=$(echo "$repo" | cut -d'/' -f1)
+            repo_name=$(echo "$repo" | cut -d'/' -f2)
+          
+            # 跳过空值
+            if [ -z "$owner" ] || [ -z "$repo_name" ]; then
+              continue
+            fi
+          
+            # 添加到 JSON 数组
+            if [ "$first" = true ]; then
+              first=false
+            else
+              json_array+=","
+            fi
+          
+            json_array+="{\"owner\":\"$owner\",\"repo\":\"$repo_name\"}"
+          done
+          
+          json_array+="]"
           
           # 格式化为 GitHub Actions matrix 所需的格式
           matrix_json="{\"include\":${json_array}}"
@@ -49,11 +72,8 @@ jobs:
         id: current_release
         run: |
           # 获取当前仓库的最新 Release 信息
-          owner=$(echo "${{ matrix.name }}" | cut -d'/' -f1)
-          repo=$(echo "${{ matrix.name }}" | cut -d'/' -f2)
-          
           response=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${owner}/${repo}/releases/latest")
+            "https://api.github.com/repos/${{ matrix.owner }}/${{ matrix.repo }}/releases/latest")
           
           # 提取版本号和 URL
           current_version=$(echo "$response" | jq -r '.name')
@@ -83,20 +103,21 @@ jobs:
         run: |
           # 读取上次记录的版本（如果存在）
           previous_version=""
-          if [ -f ".github/${{ matrix.name }}_last_release.txt" ]; then
-            previous_version=$(cat ".github/${{ matrix.name }}_last_release.txt")
+          if [ -f ".github/${{ matrix.owner }}_${{ matrix.repo }}_last_release.txt" ]; then
+            previous_version=$(cat ".github/${{ matrix.owner }}_${{ matrix.repo }}_last_release.txt")
           fi
           
           # 比较版本
           if [ "$previous_version" != "${{ env.current_version }}" ]; then
             echo "new_release=true" >> $GITHUB_ENV
             echo "previous_version=$previous_version" >> $GITHUB_ENV
-            
+          
             # 创建临时文件存储新版本信息
             mkdir -p .github/temp_releases
-            cat << EOF > ".github/temp_releases/${{ matrix.name }}.json"
+            cat << EOF > ".github/temp_releases/${{ matrix.owner }}_${{ matrix.repo }}.json"
             {
-              "repo": "${{ matrix.name }}",
+              "owner": "${{ matrix.owner }}",
+              "repo": "${{ matrix.repo }}",
               "version": "${{ env.current_version }}",
               "previous": "$previous_version",
               "url": "${{ env.release_url }}",
@@ -109,7 +130,7 @@ jobs:
           
           # 保存当前版本
           mkdir -p .github
-          echo "${{ env.current_version }}" > ".github/${{ matrix.name }}_last_release.txt"
+          echo "${{ env.current_version }}" > ".github/${{ matrix.owner }}_${{ matrix.repo }}_last_release.txt"
 
   # 整合所有新版本并发送通知
   notify:
@@ -128,41 +149,42 @@ jobs:
           # 检查是否有新版本
           if [ -d ".github/temp_releases" ] && [ "$(ls -A .github/temp_releases)" ]; then
             echo "new_releases=true" >> $GITHUB_ENV
-            
+          
             # 构建通知消息
             message_title="🎉 发现 ${#.github/temp_releases/*} 个新版本更新"
             message_body=""
-            
+          
             for file in .github/temp_releases/*.json; do
               # 从 JSON 文件读取信息
+              owner=$(jq -r '.owner' "$file")
               repo=$(jq -r '.repo' "$file")
               version=$(jq -r '.version' "$file")
               previous=$(jq -r '.previous' "$file")
               url=$(jq -r '.url' "$file")
               body=$(jq -r '.body' "$file")
-              
+          
               # 追加到消息主体
-              message_body+="\n\n### [${repo}](${url})\n\n"
+              message_body+="\n\n### [${owner}/${repo}](${url})\n\n"
               message_body+="**版本:** [${version}]\n\n"
-              
+          
               if [ "$previous" != "null" ]; then
                 message_body+="**上一版本:** [${previous}]\n\n"
               fi
-              
+          
               # 截取前 500 字符的描述（避免消息过长）
               if [ ${#body} -gt 500 ]; then
                 body="${body:0:500}..."
               fi
-              
+          
               message_body+="**更新内容:**\n\n${body}\n\n"
             done
-            
+          
             # 保存消息到环境变量
             echo "message_title=$message_title" >> $GITHUB_ENV
             echo "message_body<<EOF" >> $GITHUB_ENV
             echo "$message_body" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
-            
+          
             echo "Found new releases to notify"
           else
             echo "new_releases=false" >> $GITHUB_ENV
@@ -202,6 +224,6 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add .github/*_last_release.txt
+          git add .github/*_*_last_release.txt
           git commit -m "Update last release versions"
           git push
