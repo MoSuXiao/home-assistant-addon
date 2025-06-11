@@ -42,7 +42,7 @@ jobs:
           
             # 构建通知消息
             message_title="检测通知：🎉 发现 $release_count 个新版本更新"
-            message_body="通知："
+            message_body="Release通知："
 
             for file in .github/temp_releases/*.json; do
               # 从 JSON 文件读取信息
