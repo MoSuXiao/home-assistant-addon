@@ -12,7 +12,7 @@ runs:
   using: "composite"
   steps:
     - name: Get current release
-      id: current_release
+      id: get
       shell: bash
       run: |
         # 获取当前仓库的最新 Release 信息
@@ -53,7 +53,7 @@ runs:
         fi
         
         # 比较版本
-        if [ "$previous_version" != "${{ env.current_version }}" ]; then
+        if [ "$previous_version" != "${{ steps.get.outputs.current_version }}" ]; then
           echo "new_release=true" >> $GITHUB_ENV
         
           # 创建临时文件存储新版本信息（使用 jq 安全转义 JSON）
@@ -62,10 +62,10 @@ runs:
           # 使用 jq 构建和写入 JSON，确保特殊字符被正确转义
           jq -n --arg owner "${{ inputs.owner }}" \
                 --arg repo "${{ inputs.repo }}" \
-                --arg version "${{ steps.current_release.outputs.current_version }}" \
+                --arg version "${{ steps.get.outputs.current_version }}" \
                 --arg previous "$previous_version" \
-                --arg url "${{ steps.current_release.outputs.release_url }}" \
-                --arg body "${{ steps.current_release.outputs.body }}" \
+                --arg url "${{ steps.get.outputs.release_url }}" \
+                --arg body "${{ steps.get.outputs.body }}" \
                 '{owner: $owner, repo: $repo, version: $version, previous: $previous, url: $url, body: $body}' \
                 > ".github/temp_releases/${{ inputs.owner }}_${{ inputs.repo }}.json"
         else
