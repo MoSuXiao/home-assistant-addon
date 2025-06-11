@@ -8,7 +8,6 @@ inputs:
     description: "Repo"
     required: true
     example: "home-assistant-addon"
-  using: "composite"
   steps:
     - name: Get current release
       id: current_release
