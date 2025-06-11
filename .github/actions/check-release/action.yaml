@@ -74,4 +74,4 @@ runs:
         
         # 保存当前版本
         mkdir -p .github
-        echo "$previous_version" > ".github/${{ inputs.owner }}_${{ inputs.repo }}_last_release.txt"
+        echo "${{ steps.get.outputs.current_version }}" > ".github/${{ inputs.owner }}_${{ inputs.repo }}_last_release.txt"

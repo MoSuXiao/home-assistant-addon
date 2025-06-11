@@ -92,7 +92,7 @@ jobs:
           {
             "msgtype": "markdown",
             "markdown": {
-              "title": "$message_title",
+              "title": "${{ steps.collect.outputs.message_title }}",
               "text": "🚀 **检测时间: $timestamp**\n\n${{ steps.collect.outputs.message_body }}"
             },
             "at": {
