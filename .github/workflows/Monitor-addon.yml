@@ -32,10 +32,16 @@ jobs:
           # 检查是否有新版本
           ls -a .github/
           if [ -d ".github/temp_releases" ] && [ "$(ls -A .github/temp_releases)" ]; then
-            echo "new_releases=true" >> $GITHUB_ENV
-
+            echo "new_releases=true" >> $GITHUB_OUTPUT
+          
+            # 获取文件列表
+            releases=(.github/temp_releases/*)
+  
+            # 计算文件数量
+            release_count=${#releases[@]}
+          
             # 构建通知消息
-            message_title="🎉 发现 ${#.github/temp_releases/*} 个新版本更新"
+            message_title="🎉 发现 $release_count 个新版本更新"
             message_body=""
 
             for file in .github/temp_releases/*.json; do
@@ -64,19 +70,19 @@ jobs:
             done
 
             # 保存消息到环境变量
-            echo "message_title=$message_title" >> $GITHUB_ENV
-            echo "message_body<<EOF" >> $GITHUB_ENV
-            echo "$message_body" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
+            echo "message_title=$message_title" >> $GITHUB_OUTPUT
+            echo "message_body<<EOF" >> $GITHUB_OUTPUT
+            echo "$message_body" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
 
             echo "Found new releases to notify"
           else
-            echo "new_releases=false" >> $GITHUB_ENV
+            echo "new_releases=false" >> $GITHUB_OUTPUT
             echo "No new releases found"
           fi
 
       - name: Send DingTalk notification
-        if: env.new_releases == 'true'
+        if: steps.collect.outputs.new_releases == 'true'
         run: |
           # 设置时区为东八区并格式化时间
           timestamp=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S%:z")
@@ -87,7 +93,7 @@ jobs:
             "msgtype": "markdown",
             "markdown": {
               "title": "$message_title",
-              "text": "🚀 **检测时间: $timestamp**\n\n${{ env.message_body }}"
+              "text": "🚀 **检测时间: $timestamp**\n\n${{ steps.collect.outputs.message_body }}"
             },
             "at": {
               "isAtAll": false
@@ -104,7 +110,7 @@ jobs:
           echo "Notification sent for new releases"
 
       - name: Commit updated release files
-        if: env.new_releases == 'true'
+        if: steps.collect.outputs.new_releases == 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
