@@ -102,15 +102,23 @@ jobs:
           EOF
           )
 
-          # 发送通知
-          curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
+          # 发送通知并捕获响应
+          response=$(curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
             -H "Content-Type: application/json" \
-            -d "$message"
+            -d "$message")
 
-          echo "Notification sent for new releases"
+          # 检查响应是否成功
+          if echo "$response" | grep -q "errcode\":0"; then
+            echo "通知发送成功"
+            echo "notification_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "通知发送失败: $response"
+            echo "notification_status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
       - name: Commit updated release files
-        if: steps.collect.outputs.new_releases == 'true'
+        if: steps.collect.outputs.new_releases == 'true' && steps.send-notification.outputs.notification_status == 'success'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
