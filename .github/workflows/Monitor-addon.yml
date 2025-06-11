@@ -34,12 +34,6 @@ jobs:
           if [ -d ".github/temp_releases" ] && [ "$(ls -A .github/temp_releases)" ]; then
             echo "new_releases=true" >> $GITHUB_OUTPUT
           
-            # 获取文件列表
-            releases=(.github/temp_releases/*)
-  
-            # 计算文件数量
-            release_count=${#releases[@]}
-          
             # 构建通知消息
             message_title="新版本Release通知"
             message_body=""
@@ -82,10 +76,17 @@ jobs:
           fi
 
       - name: Send DingTalk notification
+        id: send
         if: steps.collect.outputs.new_releases == 'true'
         run: |
           # 设置时区为东八区并格式化时间
           timestamp=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S%:z")
+          
+          # 获取文件列表
+          releases=(.github/temp_releases/*)
+          
+          # 计算文件数量
+          release_count=${#releases[@]}
 
           # 构建钉钉消息
           message=$(cat <<EOF
@@ -93,7 +94,7 @@ jobs:
             "msgtype": "markdown",
             "markdown": {
               "title": "${{ steps.collect.outputs.message_title }}",
-              "text": "检测通知：🎉 发现 $release_count 个新版本更新 \n\n 🚀 **检测时间: $timestamp**\n\n${{ steps.collect.outputs.message_body }}"
+              "text": "🎉 **发现 $release_count 个新版本更新** \n\n 🚀 **检测时间: $timestamp**\n\n${{ steps.collect.outputs.message_body }}"
             },
             "at": {
               "isAtAll": false
@@ -118,7 +119,7 @@ jobs:
           fi
 
       - name: Commit updated release files
-        if: steps.collect.outputs.new_releases == 'true' && steps.send-notification.outputs.notification_status == 'success'
+        if: steps.collect.outputs.new_releases == 'true' && steps.send.outputs.notification_status == 'success'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
