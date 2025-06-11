@@ -41,6 +41,8 @@ jobs:
           
           # 打印调试信息
           echo "Current release: $current_version"
+          echo "Release url: $release_url"
+          echo "Body: $body"
 
       - name: Compare with previous release
         id: compare
