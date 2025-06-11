@@ -19,7 +19,7 @@ jobs:
         run: |
           # 获取最新 Release 信息
           response=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+            "https://api.github.com/repos/esphome/home-assistant-addon/releases/latest")
           
           # 提取版本号和 URL
           current_version=$(echo "$response" | jq -r '.name')
@@ -73,7 +73,7 @@ jobs:
             "msgtype": "markdown",
             "markdown": {
               "title": "New Release: ${{ env.current_version }}",
-              "text": "🚀 **New Release Detected at $timestamp**\n[${{ github.repository }}](${{ env.release_url }})\n**Version:** ${{ env.current_version }}\n**Previous:** ${{ env.previous_version }}\n**Description:**\n${{ env.body }}"
+              "text": "🚀 **New Release Detected at $timestamp**\n[esphome/home-assistant-addon](${{ env.release_url }})\n**Version:** ${{ env.current_version }}\n**Previous:** ${{ env.previous_version }}\n**Description:**\n${{ env.body }}"
             },
             "at": {
               "isAtAll": false
