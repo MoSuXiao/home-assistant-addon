@@ -54,8 +54,6 @@ runs:
         
         # 比较版本
         if [ "$previous_version" != "${{ steps.get.outputs.current_version }}" ]; then
-          echo "new_release=true" >> $GITHUB_ENV
-        
           # 创建临时文件存储新版本信息（使用 jq 安全转义 JSON）
           mkdir -p .github/temp_releases
         
@@ -68,8 +66,6 @@ runs:
                 --arg body "${{ steps.get.outputs.body }}" \
                 '{owner: $owner, repo: $repo, version: $version, previous: $previous, url: $url, body: $body}' \
                 > ".github/temp_releases/${{ inputs.owner }}_${{ inputs.repo }}.json"
-        else
-          echo "new_release=false" >> $GITHUB_ENV
         fi
         
         # 保存当前版本

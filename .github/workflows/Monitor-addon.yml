@@ -41,7 +41,7 @@ jobs:
             release_count=${#releases[@]}
           
             # 构建通知消息
-            message_title="🎉 发现 $release_count 个新版本更新"
+            message_title="检测通知：🎉 发现 $release_count 个新版本更新"
             message_body=""
 
             for file in .github/temp_releases/*.json; do
