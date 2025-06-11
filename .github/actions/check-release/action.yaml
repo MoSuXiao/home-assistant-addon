@@ -13,6 +13,7 @@ runs:
   steps:
     - name: Get current release
       id: current_release
+      shell: bash
       run: |
         # 获取当前仓库的最新 Release 信息
         response=$(curl -s -H "Accept: application/vnd.github.v3+json" \
@@ -43,6 +44,7 @@ runs:
 
     - name: Compare with previous release
       id: compare
+      shell: bash
       run: |
         # 读取上次记录的版本（如果存在）
         previous_version=""
