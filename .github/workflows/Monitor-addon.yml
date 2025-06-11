@@ -49,10 +49,10 @@ jobs:
 
               # 追加到消息主体
               message_body+="\n\n### [${owner}/${repo}](${url})\n\n"
-              message_body+="**版本:** [${version}]\n\n"
+              message_body+="**版本: [${version}]**\n\n"
 
               if [ "$previous" != "null" ]; then
-                message_body+="**上一版本:** [${previous}]\n\n"
+                message_body+="**上一版本: [${previous}]**\n\n"
               fi
 
               # 截取前 500 字符的描述（避免消息过长）
