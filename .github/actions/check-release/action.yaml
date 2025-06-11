@@ -1,0 +1,74 @@
+name: Check Release
+inputs:
+  owner:
+    description: "Owner"
+    required: true
+    example: "esphome"
+  repo:
+    description: "Repo"
+    required: true
+    example: "home-assistant-addon"
+  using: "composite"
+  steps:
+    - name: Get current release
+      id: current_release
+      run: |
+        # 获取当前仓库的最新 Release 信息
+        response=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ inputs.owner }}/${{ inputs.repo }}/releases/latest")
+        
+        # 提取版本号和 URL
+        current_version=$(echo "$response" | jq -r '.tag_name')
+        release_url=$(echo "$response" | jq -r '.html_url')
+        body=$(echo "$response" | jq -r '.body')
+        
+        # 使用 GitHub 环境文件格式设置变量
+        echo "current_version<<EOF" >> $GITHUB_OUTPUT
+        echo "$current_version" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+        echo "release_url<<EOF" >> $GITHUB_OUTPUT
+        echo "$release_url" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+        echo "body<<EOF" >> $GITHUB_OUTPUT
+        echo "$body" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+        # 打印调试信息
+        echo "Current release: $current_version"
+        echo "Release url: $release_url"
+        echo "Body: $body"
+
+    - name: Compare with previous release
+      id: compare
+      run: |
+        # 读取上次记录的版本（如果存在）
+        previous_version=""
+        if [ -f ".github/${{ inputs.owner }}_${{ inputs.repo }}_last_release.txt" ]; then
+          previous_version=$(cat ".github/${{ inputs.owner }}_${{ inputs.repo }}_last_release.txt")
+        fi
+        
+        # 比较版本
+        if [ "$previous_version" != "${{ env.current_version }}" ]; then
+          echo "new_release=true" >> $GITHUB_ENV
+        
+          # 创建临时文件存储新版本信息（使用 jq 安全转义 JSON）
+          mkdir -p .github/temp_releases
+        
+          # 使用 jq 构建和写入 JSON，确保特殊字符被正确转义
+          jq -n --arg owner "${{ inputs.owner }}" \
+                --arg repo "${{ inputs.repo }}" \
+                --arg version "${{ steps.current_release.outputs.current_version }}" \
+                --arg previous "$previous_version" \
+                --arg url "${{ steps.current_release.outputs.release_url }}" \
+                --arg body "${{ steps.current_release.outputs.body }}" \
+                '{owner: $owner, repo: $repo, version: $version, previous: $previous, url: $url, body: $body}' \
+                > ".github/temp_releases/${{ inputs.owner }}_${{ inputs.repo }}.json"
+        else
+          echo "new_release=false" >> $GITHUB_ENV
+        fi
+        
+        # 保存当前版本
+        mkdir -p .github
+        echo "$previous_version" > ".github/${{ inputs.owner }}_${{ inputs.repo }}_last_release.txt"
