@@ -41,8 +41,8 @@ jobs:
             release_count=${#releases[@]}
           
             # 构建通知消息
-            message_title="检测通知：🎉 发现 $release_count 个新版本更新"
-            message_body="Release通知："
+            message_title="新版本Release通知"
+            message_body=""
 
             for file in .github/temp_releases/*.json; do
               # 从 JSON 文件读取信息
@@ -93,7 +93,7 @@ jobs:
             "msgtype": "markdown",
             "markdown": {
               "title": "${{ steps.collect.outputs.message_title }}",
-              "text": "🚀 **检测时间: $timestamp**\n\n${{ steps.collect.outputs.message_body }}"
+              "text": "检测通知：🎉 发现 $release_count 个新版本更新 \n\n 🚀 **检测时间: $timestamp**\n\n${{ steps.collect.outputs.message_body }}"
             },
             "at": {
               "isAtAll": false
