@@ -147,7 +147,7 @@ jobs:
         id: collect
         run: |
           # 检查是否有新版本
-          ls -a .github/temp_releases
+          ls -a .github/
           if [ -d ".github/temp_releases" ] && [ "$(ls -A .github/temp_releases)" ]; then
             echo "new_releases=true" >> $GITHUB_ENV
           
