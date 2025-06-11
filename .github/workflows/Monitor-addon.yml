@@ -29,8 +29,11 @@ jobs:
           printf -v json_array '{"name":"%s"},' "${repo_array[@]}"
           json_array="[${json_array%,}]"
           
-          echo "matrix=$json_array" >> $GITHUB_OUTPUT
-          echo "Repositories to monitor: $json_array"
+          # 格式化为 GitHub Actions matrix 所需的格式
+          matrix_json="{\"include\":${json_array}}"
+          
+          echo "matrix=$matrix_json" >> $GITHUB_OUTPUT
+          echo "Matrix configuration: $matrix_json"
 
   # 并行监控每个仓库
   monitor:
