@@ -48,7 +48,7 @@ jobs:
             echo "new_releases=true" >> $GITHUB_OUTPUT
           
             message_title="新版本Release通知"
-            message_body=""
+            message_body+="---------------------------------------\n\n"
 
             for file in .github/temp_releases/*.json; do
               owner=$(jq -r '.owner' "$file")
@@ -66,6 +66,7 @@ jobs:
               fi
 
               message_body+="**更新内容:**\n\n${body}\n\n"
+              message_body+="---------------------------------------\n\n"
             done
 
             echo "message_title=$message_title" >> $GITHUB_OUTPUT
