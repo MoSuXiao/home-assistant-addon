@@ -29,8 +29,8 @@ runs:
         
         # 提取版本号和 URL
         current_version=$(echo "$response" | yq -r '.version')
-        release_url="https://github.com/home-assistant/addons/blob/master/${{ inputs.addon_folder_name }}/${{ inputs.change_log }}"
-        body="unknown"
+        release_url="https://github.com/home-assistant/addons/blob/master/${{ inputs.addon_folder_name }}/${{ inputs.config }}"
+        body="[CHANGELOG.md](https://github.com/home-assistant/addons/blob/master/${{ inputs.addon_folder_name }}/${{ inputs.change_log }})"
         
         # 使用 GitHub 环境文件格式设置变量
         echo "current_version<<EOF" >> $GITHUB_OUTPUT
