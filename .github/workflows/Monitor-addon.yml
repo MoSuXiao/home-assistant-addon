@@ -1,18 +1,22 @@
-name: Monitor Addon Release
+name: Monitor Addon Version
 
 on:
-  # schedule:
-    # - cron: '0 17 * * *'
-  # 手动触发（方便测试）
+  #  schedule:
+  #     - cron: '0 1 * * *'
   workflow_dispatch:
 
 jobs:
-  # 并行监控每个仓库
   monitor:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Use yq
+        uses: mikefarah/yq@v4
+        with:
+          cmd:
+            yq --version || echo "yq 未安装"
 
       - name: Check EspHome-Addon release
         uses: ./.github/actions/check-release
@@ -26,20 +30,27 @@ jobs:
           owner: esphome
           repo: esphome
 
+      - name: Check Python-Matter-Server release
+        uses: ./.github/actions/check-release
+        with:
+          owner: home-assistant-libs
+          repo: python-matter-server
+
+      - name: Check Matter-Server-Addon release
+        uses: ./.github/actions/check-addon-version
+        with:
+          addonFolderName:  matter_server
+
       - name: Collect new releases
         id: collect
         run: |
-          # 检查是否有新版本
-          ls -a .github/
           if [ -d ".github/temp_releases" ] && [ "$(ls -A .github/temp_releases)" ]; then
             echo "new_releases=true" >> $GITHUB_OUTPUT
           
-            # 构建通知消息
             message_title="新版本Release通知"
             message_body=""
 
             for file in .github/temp_releases/*.json; do
-              # 从 JSON 文件读取信息
               owner=$(jq -r '.owner' "$file")
               repo=$(jq -r '.repo' "$file")
               version=$(jq -r '.version' "$file")
@@ -47,7 +58,6 @@ jobs:
               url=$(jq -r '.url' "$file")
               body=$(jq -r '.body' "$file")
 
-              # 追加到消息主体
               message_body+="\n\n### [${owner}/${repo}](${url})\n\n"
               message_body+="**版本: [${version}]**\n\n"
 
@@ -55,15 +65,13 @@ jobs:
                 message_body+="**上一版本: [${previous}]**\n\n"
               fi
 
-              # 截取前 500 字符的描述（避免消息过长）
-              if [ ${#body} -gt 500 ]; then
-                body="${body:0:500}..."
+              if [ ${#body} -gt 100 ]; then
+                body="${body:0:100}..."
               fi
 
               message_body+="**更新内容:**\n\n${body}\n\n"
             done
 
-            # 保存消息到环境变量
             echo "message_title=$message_title" >> $GITHUB_OUTPUT
             echo "message_body<<EOF" >> $GITHUB_OUTPUT
             echo "$message_body" >> $GITHUB_OUTPUT
@@ -79,16 +87,12 @@ jobs:
         id: send
         if: steps.collect.outputs.new_releases == 'true'
         run: |
-          # 设置时区为东八区并格式化时间
           timestamp=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S%:z")
           
-          # 获取文件列表
           releases=(.github/temp_releases/*)
           
-          # 计算文件数量
           release_count=${#releases[@]}
 
-          # 构建钉钉消息
           message=$(cat <<EOF
           {
             "msgtype": "markdown",
@@ -103,17 +107,15 @@ jobs:
           EOF
           )
 
-          # 发送通知并捕获响应
           response=$(curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
             -H "Content-Type: application/json" \
             -d "$message")
 
-          # 检查响应是否成功
           if echo "$response" | grep -q "errcode\":0"; then
-            echo "通知发送成功"
+            echo "success"
             echo "notification_status=success" >> $GITHUB_OUTPUT
           else
-            echo "通知发送失败: $response"
+            echo "faild: $response"
             echo "notification_status=failure" >> $GITHUB_OUTPUT
             exit 1
           fi
