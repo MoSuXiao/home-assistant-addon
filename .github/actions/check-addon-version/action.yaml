@@ -18,13 +18,14 @@ runs:
       shell: bash
       run: |
         config_url="https://raw.githubusercontent.com/home-assistant/addons/refs/heads/master/${{ inputs.addonFolderName }}/${{ inputs.config }}"
+        
         # 获取当前仓库的最新 Release 信息
         response=$(curl -s -H "Accept: application/vnd.github.v3+json" $config_url)
         
         # 提取版本号和 URL
         current_version=$(echo "$response" | yq -r '.version')
-        release_url=$config_url
-        body='unknown'
+        release_url="https://github.com/home-assistant/addons/blob/master/${{ inputs.addonFolderName }}/${{ inputs.config }}"
+        body="unknown"
         
         # 使用 GitHub 环境文件格式设置变量
         echo "current_version<<EOF" >> $GITHUB_OUTPUT
