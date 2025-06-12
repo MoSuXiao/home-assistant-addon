@@ -59,11 +59,7 @@ jobs:
               body=$(jq -r '.body' "$file")
 
               message_body+="\n\n### [${owner}/${repo}](${url})\n\n"
-              message_body+="**版本: [${version}]**\n\n"
-
-              if [ "$previous" != "null" ]; then
-                message_body+="**上一版本: [${previous}]**\n\n"
-              fi
+              message_body+="**版本更新: [${previous}] ➡️ [${version}]**\n\n"
 
               if [ ${#body} -gt 100 ]; then
                 body="${body:0:100}..."
