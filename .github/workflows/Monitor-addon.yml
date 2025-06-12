@@ -39,7 +39,12 @@ jobs:
       - name: Check Matter-Server-Addon release
         uses: ./.github/actions/check-addon-version
         with:
-          addonFolderName:  matter_server
+          addon_folder_name:  matter_server
+
+      - name: Check Matter-Server-Addon release
+        uses: ./.github/actions/check-addon-version
+        with:
+          addon_folder_name: openthread_border_router
 
       - name: Collect new releases
         id: collect
