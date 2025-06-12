@@ -23,7 +23,7 @@ runs:
         
         # 提取版本号和 URL
         current_version=$(echo "$response" | yq -r '.version')
-        release_url=$(echo "config_url")
+        release_url=$config_url
         body='unknown'
         
         # 使用 GitHub 环境文件格式设置变量
@@ -46,30 +46,10 @@ runs:
 
     - name: Compare with previous release
       id: compare
-      shell: bash
-      run: |
-        # 读取上次记录的版本（如果存在）
-        previous_version=""
-        if [ -f ".github/addons_${{ inputs.addonFolderName }}_last_release.txt" ]; then
-          previous_version=$(cat ".github/addons_${{ inputs.addonFolderName }}_last_release.txt")
-        fi
-        
-        # 比较版本
-        if [ "$previous_version" != "${{ steps.get.outputs.current_version }}" ]; then
-          # 创建临时文件存储新版本信息（使用 jq 安全转义 JSON）
-          mkdir -p .github/temp_releases
-        
-          # 使用 jq 构建和写入 JSON，确保特殊字符被正确转义
-          jq -n --arg owner "${{ inputs.owner }}" \
-                --arg repo "${{ inputs.repo }}" \
-                --arg version "${{ steps.get.outputs.current_version }}" \
-                --arg previous "$previous_version" \
-                --arg url "${{ steps.get.outputs.release_url }}" \
-                --arg body "${{ steps.get.outputs.body }}" \
-                '{owner: $owner, repo: $repo, version: $version, previous: $previous, url: $url, body: $body}' \
-                > ".github/temp_releases/addons_${{ inputs.addonFolderName }}.json"
-        fi
-        
-        # 保存当前版本
-        mkdir -p .github
-        echo "${{ steps.get.outputs.current_version }}" > ".github/addons_${{ inputs.addonFolderName }}_last_release.txt"
+      uses: ./.github/actions/compare-with-previous
+      with:
+        owner: addons
+        repo: ${{ inputs.addonFolderName }}
+        current_version: ${{ steps.get.outputs.current_version }}
+        release_url: ${{ steps.get.outputs.release_url }}
+        body: ${{ steps.get.outputs.body }}

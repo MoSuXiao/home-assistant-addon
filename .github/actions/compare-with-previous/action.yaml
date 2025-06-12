@@ -1,4 +1,4 @@
-name: Check Release
+name: Compare with previous release
 inputs:
   owner:
     description: "Owner"
