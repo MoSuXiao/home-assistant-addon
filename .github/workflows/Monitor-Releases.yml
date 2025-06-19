@@ -75,7 +75,7 @@ jobs:
             "msgtype": "markdown",
             "markdown": {
               "title": "New Release: ${{ env.current_version }}",
-              "text": "🚀 **New Release Detected at $timestamp**\n\n**Repo:**[esphome/home-assistant-addon](${{ env.release_url }})\n\n**Version:**[${{ env.current_version }}]\n\n**Previous:**[${{ env.previous_version }}]\n\n**Description:**\n\n ${{ env.body }}"
+              "text": "🚀 **New Release Detected at $timestamp**\n\n**Repo:**[esphome/home-assistant-addon](${{ env.release_url }})\n\n**Version:**[${{ env.current_version }}]\n\n**Previous:**[${{ env.previous_version }}]\n\n**Description:**\n\n" + ${{ env.body }}
             },
             "at": {
               "isAtAll": false
