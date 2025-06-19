@@ -31,7 +31,9 @@ runs:
         # 读取上次记录的版本（如果存在）
         previous_version=""
         if [ -f ".github/${{ inputs.owner }}_${{ inputs.repo }}_last_release.txt" ]; then
-          previous_version=$(cat ".github/${{ inputs.owner }}_${{ inputs.repo }}_last_release.txt")
+          echo "文件存在，准备读取..."
+          previous_version=$(cat ".github/esphome_home-assistant-addon_last_release.txt")
+          echo "读取到的 previous_version: '$previous_version'"
         fi
         
         # 比较版本
