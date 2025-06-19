@@ -22,7 +22,8 @@ runs:
         # 提取版本号和 URL
         current_version=$(echo "$response" | jq -r '.tag_name')
         release_url=$(echo "$response" | jq -r '.html_url')
-        body=$(echo "$response" | jq -r '.body | @json')
+        body="[CHANGELOG.md](https://github.com/${{ inputs.owner }}/${{ inputs.repo }}/releases/tag/$current_version)"
+#        body=$(echo "$response" | jq -r '.body | @json')
         
         # 使用 GitHub 环境文件格式设置变量
         echo "current_version<<EOF" >> $GITHUB_OUTPUT
