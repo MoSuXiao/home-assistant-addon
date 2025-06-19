@@ -31,8 +31,8 @@ init: false
 startup: services
 name: ESPHome Device Builder
 panel_title: ESPHome Builder
-version: 2025.6.0
+version: 2025.5.2
 slug: esphome
 description: Build your own smart home devices using ESPHome, no programming experience
   required
-image: ghcr.io/mosuxiao/esphome-hassio
+image: ghcr.io/ihost-open-source-project/esphome-hassio
