@@ -1,8 +1,7 @@
 ---
 url: https://esphome.io/
 arch:
-- amd64
-- aarch64
+- armv7
 hassio_api: true
 auth_api: true
 host_network: true
