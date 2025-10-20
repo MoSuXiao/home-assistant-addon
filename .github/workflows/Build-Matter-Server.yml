@@ -14,8 +14,6 @@ jobs:
 
       - name: check dir
         run: |
-          pwd
-#          cd ./hassio-ihost-matter-server
           ls -la
 
       - name: Log in to the GitHub container registry
