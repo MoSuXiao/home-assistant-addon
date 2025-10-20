@@ -39,7 +39,7 @@ jobs:
         with:
           context: ./hassio-ihost-matter-server
           platforms: linux/arm/v7
-          file: Dockerfile
+          file: ./hassio-ihost-matter-server/Dockerfile
           tags: |-
             ghcr.io/mosuxiao/armv7-addon-matter-server:8.1.1
           push: true
