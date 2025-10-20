@@ -14,9 +14,8 @@ jobs:
 
       - name: check dir
         run: |
-          ls -la
-#          cd ./hassio-ihost-matter-server
-#          pwd
+          cd ./hassio-ihost-matter-server
+          pwd
           ls -la
 
       - name: Log in to the GitHub container registry
@@ -26,11 +25,11 @@ jobs:
           username: ${{ secrets.ACTOR }}
           password: ${{ secrets.PAT }}
 
-#      - name: Log in to the DockerHub container registry
-#        uses: docker/login-action@v3.4.0
-#        with:
-#          username: ${{ secrets.DOCKER_USER }}
-#          password: ${{ secrets.DOCKER_PASSWORD }}
+      #      - name: Log in to the DockerHub container registry
+      #        uses: docker/login-action@v3.4.0
+      #        with:
+      #          username: ${{ secrets.DOCKER_USER }}
+      #          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3.11.1
@@ -40,7 +39,7 @@ jobs:
         with:
           context: ./hassio-ihost-matter-server
           platforms: linux/arm/v7
-          file: ./hassio-ihost-matter-server/Dockerfile
+          file: Dockerfile
           tags: |-
             ghcr.io/mosuxiao/armv7-addon-matter-server:8.1.1
           push: true
