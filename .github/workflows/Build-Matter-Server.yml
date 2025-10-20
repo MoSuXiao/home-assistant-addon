@@ -1,12 +1,7 @@
-name: Publish releases
+name: Build-Matter-Server
 
 on:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to use (e.g., 8.1.1-armv7)'
-        required: true
-        default: '8.1.1-armv7'
 
 jobs:
   build-and-push-container-image:
@@ -42,7 +37,7 @@ jobs:
       - name: Build and Push release
         uses: docker/build-push-action@v6.18.0
         with:
-          context: .
+          context: ./hassio-ihost-matter-server
           platforms: linux/arm/v7
           file: Dockerfile
           tags: |-
